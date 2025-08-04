@@ -11,6 +11,15 @@ import { Card, ProgressBar, Button } from '@/components/ui';
 import { Colors, Typography, Spacing } from '@/constants/Theme';
 import { CommonStyles } from '@/constants/Styles';
 import WeatherCard from '@/components/WeatherCard';
+import PregnancyCalendar from '@/components/PregnancyCalendar';
+import NutritionGuide from '@/components/NutritionGuide';
+import CheckupReminder from '@/components/CheckupReminder';
+import { MoodDiary } from '@/components/MoodDiary';
+import FetalMovementCounter from '@/components/FetalMovementCounter';
+import { FamilyCollaboration } from '@/components/FamilyCollaboration';
+import { Calendar } from '@/components/Calendar';
+import { DeliveryBagChecklist } from '@/components/DeliveryBagChecklist';
+import { EmergencyContact } from '@/components/EmergencyContact';
 
 export default function HomeScreen() {
   return (
@@ -31,22 +40,41 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 孕期进度卡片 */}
-        <Card style={styles.progressCard} variant="pregnant">
-          <View style={styles.progressHeader}>
-            <Text style={CommonStyles.textH4}>🤱 孕期进度 - 第24周</Text>
-          </View>
-          <ProgressBar
-            progress={60}
-            showLabel={true}
-            label="距离预产期还有 112 天"
-            style={styles.progressBar}
-          />
-          <Text style={CommonStyles.textBodySmall}>宝宝现在约 600g，像个芒果 🥭</Text>
-        </Card>
+        {/* 孕期日历 */}
+        <PregnancyCalendar />
 
         {/* 天气信息 */}
         <WeatherCard />
+
+        {/* 饮食营养指导 */}
+        <NutritionGuide pregnancyWeek={24} />
+
+        {/* 产检提醒 */}
+        <CheckupReminder currentWeek={24} />
+
+        {/* 情绪关怀 */}
+        <MoodDiary />
+
+        {/* 胎动记录 */}
+        <Card style={styles.card}>
+          <Text style={CommonStyles.textH4}>👶 胎动记录</Text>
+          <FetalMovementCounter pregnancyWeek={24} />
+        </Card>
+
+        {/* 家庭协作 */}
+        <FamilyCollaboration currentUserId="member_1" pregnancyWeek={24} />
+
+        {/* 综合日历 */}
+        <Card style={styles.card}>
+          <Text style={CommonStyles.textH4}>📅 综合日历</Text>
+          <Calendar />
+        </Card>
+
+        {/* 待产包清单 */}
+        <DeliveryBagChecklist pregnancyWeek={24} />
+
+        {/* 紧急联系 */}
+        <EmergencyContact />
 
         {/* 今日任务 */}
         <Card style={styles.card}>

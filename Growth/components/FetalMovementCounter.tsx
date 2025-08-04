@@ -11,12 +11,16 @@ import {
 import { Card, Button, ProgressBar } from './ui';
 import { Colors, Typography, Spacing, BorderRadius } from '../constants/Theme';
 import { CommonStyles } from '../constants/Styles';
+import { fetalMovementService } from '../services/fetalMovementService';
+import { FetalMovementAnalytics } from './FetalMovementAnalytics';
 
 interface FetalMovementCounterProps {
+  pregnancyWeek?: number;
   onCountingComplete?: (count: number, duration: number) => void;
 }
 
 const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
+  pregnancyWeek = 28,
   onCountingComplete,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -24,6 +28,9 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
   const [isActive, setIsActive] = useState(false);
   const [time, setTime] = useState(0);
   const [targetReached, setTargetReached] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [quality, setQuality] = useState<'weak' | 'normal' | 'strong'>('normal');
+  const [pattern, setPattern] = useState<'regular' | 'irregular' | 'clustered'>('regular');
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -106,6 +113,22 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
         {
           text: '保存记录',
           onPress: () => {
+            // 保存到服务中
+            const startTime = new Date();
+            startTime.setSeconds(startTime.getSeconds() - duration);
+            
+            fetalMovementService.saveRecord({
+              date: new Date(),
+              startTime,
+              endTime: new Date(),
+              count: finalCount,
+              duration,
+              pregnancyWeek,
+              quality,
+              pattern,
+              notes: `记录时长: ${formatTime(duration)}`
+            });
+            
             onCountingComplete?.(finalCount, duration);
             setModalVisible(false);
           },
@@ -126,6 +149,22 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
         {
           text: '完成记录',
           onPress: () => {
+            // 保存到服务中
+            const startTime = new Date();
+            startTime.setSeconds(startTime.getSeconds() - time);
+            
+            fetalMovementService.saveRecord({
+              date: new Date(),
+              startTime,
+              endTime: new Date(),
+              count,
+              duration: time,
+              pregnancyWeek,
+              quality,
+              pattern,
+              notes: `目标达成记录`
+            });
+            
             onCountingComplete?.(count, time);
             setModalVisible(false);
           },
@@ -181,16 +220,50 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.counterButton}
-        onPress={handleStartCounting}
-        activeOpacity={0.8}
-      >
-        <View style={styles.buttonContent}>
-          <Text style={styles.buttonIcon}>👶</Text>
-          <Text style={styles.buttonText}>开始胎动记录</Text>
+      <View style={styles.containerWrapper}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={[styles.counterButton, { flex: 1, marginRight: 8 }]}
+            onPress={handleStartCounting}
+            activeOpacity={0.8}
+          >
+            <View style={styles.buttonContent}>
+              <Text style={styles.buttonIcon}>👶</Text>
+              <Text style={styles.buttonText}>开始记录</Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.analyticsButton, { flex: 1, marginLeft: 8 }]}
+            onPress={() => setShowAnalytics(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.buttonContent}>
+              <Text style={styles.buttonIcon}>📊</Text>
+              <Text style={styles.buttonText}>查看分析</Text>
+            </View>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+        
+        {/* 今日简要统计 */}
+        <View style={styles.todayStats}>
+          <Text style={styles.todayStatsTitle}>今日胎动</Text>
+          <View style={styles.todayStatsContent}>
+            <View style={styles.todayStatItem}>
+              <Text style={styles.todayStatValue}>
+                {fetalMovementService.getTodayRecords().reduce((sum, r) => sum + r.count, 0)}
+              </Text>
+              <Text style={styles.todayStatLabel}>次数</Text>
+            </View>
+            <View style={styles.todayStatItem}>
+              <Text style={styles.todayStatValue}>
+                {fetalMovementService.getTodayRecords().length}
+              </Text>
+              <Text style={styles.todayStatLabel}>记录</Text>
+            </View>
+          </View>
+        </View>
+      </View>
 
       <Modal
         animationType="slide"
@@ -260,6 +333,61 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
                 {formatTime(time)}/1:00:00
               </Text>
             </Card>
+
+            {/* 胎动质量和模式选择 */}
+            <Card style={styles.qualityCard}>
+              <Text style={CommonStyles.textBody}>胎动质量</Text>
+              <View style={styles.qualityButtons}>
+                {[
+                  { key: 'weak', label: '较弱', color: Colors.warning },
+                  { key: 'normal', label: '正常', color: Colors.info },
+                  { key: 'strong', label: '强烈', color: Colors.success }
+                ].map(item => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[
+                      styles.qualityButton,
+                      quality === item.key && { backgroundColor: item.color + '20', borderColor: item.color }
+                    ]}
+                    onPress={() => setQuality(item.key as any)}
+                  >
+                    <Text style={[
+                      styles.qualityButtonText,
+                      quality === item.key && { color: item.color }
+                    ]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Card>
+
+            <Card style={styles.patternCard}>
+              <Text style={CommonStyles.textBody}>胎动模式</Text>
+              <View style={styles.patternButtons}>
+                {[
+                  { key: 'regular', label: '规律' },
+                  { key: 'irregular', label: '不规律' },
+                  { key: 'clustered', label: '集中' }
+                ].map(item => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[
+                      styles.patternButton,
+                      pattern === item.key && styles.patternButtonActive
+                    ]}
+                    onPress={() => setPattern(item.key as any)}
+                  >
+                    <Text style={[
+                      styles.patternButtonText,
+                      pattern === item.key && styles.patternButtonTextActive
+                    ]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Card>
           </View>
 
           <View style={styles.footer}>
@@ -279,17 +407,76 @@ const FetalMovementCounter: React.FC<FetalMovementCounterProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* 分析模态框 */}
+      <Modal
+        visible={showAnalytics}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.analyticsModalContainer}>
+          <View style={styles.analyticsHeader}>
+            <TouchableOpacity onPress={() => setShowAnalytics(false)}>
+              <Text style={styles.analyticsCloseText}>完成</Text>
+            </TouchableOpacity>
+            <Text style={styles.analyticsTitle}>胎动分析</Text>
+            <View style={styles.placeholder} />
+          </View>
+          <FetalMovementAnalytics pregnancyWeek={pregnancyWeek} />
+        </View>
+      </Modal>
     </>
   );
 };
 
 const styles = StyleSheet.create({
+  containerWrapper: {
+    gap: 12,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+  },
   counterButton: {
     backgroundColor: Colors.primary,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     alignItems: 'center',
+  },
+  analyticsButton: {
+    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+  },
+  todayStats: {
+    backgroundColor: Colors.neutral100,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  todayStatsTitle: {
+    fontSize: Typography.fontSize.body,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.neutral700,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  todayStatsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  todayStatItem: {
+    alignItems: 'center',
+  },
+  todayStatValue: {
+    fontSize: Typography.fontSize.h3,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
+  },
+  todayStatLabel: {
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.neutral500,
   },
   buttonContent: {
     flexDirection: 'row',
@@ -399,6 +586,83 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     flex: 1,
+  },
+  qualityCard: {
+    width: '100%',
+    marginBottom: Spacing.md,
+  },
+  qualityButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  qualityButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.neutral200,
+    borderWidth: 1,
+    borderColor: Colors.neutral300,
+    alignItems: 'center',
+  },
+  qualityButtonText: {
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.neutral700,
+  },
+  patternCard: {
+    width: '100%',
+    marginBottom: Spacing.md,
+  },
+  patternButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  patternButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.neutral200,
+    borderWidth: 1,
+    borderColor: Colors.neutral300,
+    alignItems: 'center',
+  },
+  patternButtonActive: {
+    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.primary,
+  },
+  patternButtonText: {
+    fontSize: Typography.fontSize.bodySmall,
+    color: Colors.neutral700,
+  },
+  patternButtonTextActive: {
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  analyticsModalContainer: {
+    flex: 1,
+    backgroundColor: Colors.neutral100,
+  },
+  analyticsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral200,
+  },
+  analyticsCloseText: {
+    fontSize: Typography.fontSize.bodyLarge,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  analyticsTitle: {
+    fontSize: Typography.fontSize.h4,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.neutral900,
   },
 });
 
