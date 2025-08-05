@@ -9,15 +9,21 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Card } from '@/components/ui';
-import { Colors, Typography, Spacing } from '@/constants/Theme';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/Theme';
 import { CommonStyles } from '@/constants/Styles';
 import { weatherService, WeatherData, WeatherAdvice } from '@/services/weatherService';
 
 interface WeatherCardProps {
   style?: ViewStyle;
+  variant?: 'default' | 'compact';
+  size?: 'compact' | 'default' | 'large';
 }
 
-export default function WeatherCard({ style }: WeatherCardProps) {
+export default function WeatherCard({
+  style,
+  variant = 'default',
+  size = 'default'
+}: WeatherCardProps) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [advice, setAdvice] = useState<WeatherAdvice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +58,12 @@ export default function WeatherCard({ style }: WeatherCardProps) {
 
   if (loading) {
     return (
-      <Card style={style ? { ...styles.card, ...style } : styles.card}>
+      <Card
+        style={style}
+        variant="elevated"
+        shadow="card"
+        size={size}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={[CommonStyles.textBodySmall, { marginTop: Spacing.sm }]}>
@@ -65,7 +76,13 @@ export default function WeatherCard({ style }: WeatherCardProps) {
 
   if (!weather || !advice) {
     return (
-      <Card style={style ? { ...styles.card, ...style } : styles.card}>
+      <Card
+        style={style}
+        variant="outlined"
+        shadow="sm"
+        size={size}
+        borderColor={Colors.warning}
+      >
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>🌤️</Text>
           <Text style={CommonStyles.textBodySmall}>暂无天气信息</Text>
@@ -78,11 +95,16 @@ export default function WeatherCard({ style }: WeatherCardProps) {
   }
 
   return (
-    <Card style={style ? { ...styles.card, ...style } : styles.card}>
+    <Card
+      style={style}
+      variant="elevated"
+      shadow="card"
+      size={size}
+    >
       {/* 天气信息头部 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={CommonStyles.textH4}>🌤️ 今日天气</Text>
+          <Text style={styles.cardTitle}>🌤️ 今日天气</Text>
           <Text style={[CommonStyles.textCaption, { color: Colors.neutral500 }]}>
             {weather.city}
           </Text>
@@ -176,9 +198,6 @@ export default function WeatherCard({ style }: WeatherCardProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: Spacing.md,
-  },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.lg,
@@ -194,26 +213,39 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.sm,
     backgroundColor: Colors.primary,
-    borderRadius: 6,
+    borderRadius: BorderRadius.md,
+    ...Shadows.sm,
   },
   retryText: {
     color: Colors.neutral100,
     fontSize: Typography.fontSize.bodySmall,
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: Typography.fontWeight.semibold,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral200,
   },
   headerLeft: {
     flex: 1,
   },
+  cardTitle: {
+    fontSize: Typography.fontSize.h4,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.neutral800,
+    marginBottom: Spacing.xs,
+  },
   refreshButton: {
-    padding: Spacing.xs,
+    padding: Spacing.sm,
+    backgroundColor: Colors.neutral200,
+    borderRadius: BorderRadius.full,
+    ...Shadows.xs,
   },
   refreshIcon: {
     fontSize: 16,
@@ -221,7 +253,12 @@ const styles = StyleSheet.create({
   mainWeather: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
+    padding: Spacing.sm,
+    backgroundColor: Colors.neutral100,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
   },
   temperatureSection: {
     flexDirection: 'row',
@@ -230,7 +267,7 @@ const styles = StyleSheet.create({
   },
   weatherIcon: {
     fontSize: 48,
-    marginRight: Spacing.sm,
+    marginRight: Spacing.md,
   },
   temperatureInfo: {
     alignItems: 'flex-start',
@@ -247,38 +284,45 @@ const styles = StyleSheet.create({
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Spacing.xs,
+    marginTop: Spacing.sm,
+    gap: Spacing.md,
   },
   adviceToggle: {
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.neutral100,
-    borderRadius: 8,
+    backgroundColor: Colors.primaryLight + '30',
+    borderRadius: BorderRadius.md,
     alignItems: 'center',
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.primary + '30',
   },
   adviceToggleText: {
     fontSize: Typography.fontSize.bodySmall,
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.primary,
   },
   adviceContainer: {
     marginTop: Spacing.md,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.neutral200,
+    borderTopColor: Colors.neutral300,
   },
   adviceItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: Spacing.md,
+    padding: Spacing.sm,
+    backgroundColor: Colors.neutral100,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.neutral200,
   },
   warningItem: {
     backgroundColor: Colors.errorLight,
-    padding: Spacing.sm,
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
     borderLeftColor: Colors.error,
+    borderColor: Colors.error + '40',
   },
   adviceIcon: {
     fontSize: 20,
@@ -289,24 +333,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   adviceTitle: {
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.neutral700,
-    marginBottom: 2,
+    marginBottom: 4,
+    fontSize: Typography.fontSize.bodySmall,
   },
   warningTitle: {
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: Typography.fontWeight.semibold,
     color: Colors.error,
-    marginBottom: 2,
+    marginBottom: 4,
+    fontSize: Typography.fontSize.bodySmall,
   },
   healthTips: {
     backgroundColor: Colors.infoLight,
-    padding: Spacing.sm,
-    borderRadius: 8,
-    borderLeftWidth: 3,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderLeftWidth: 4,
     borderLeftColor: Colors.info,
+    marginTop: Spacing.sm,
   },
   healthTip: {
     marginTop: Spacing.xs,
     color: Colors.neutral700,
+    fontSize: Typography.fontSize.bodySmall,
   },
 });

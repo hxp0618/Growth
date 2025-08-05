@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -24,6 +25,48 @@ export default function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // 动画值
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(50))[0];
+
+  useEffect(() => {
+    // 页面进入动画
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  // 手机号验证
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^1[3-9]\d{9}$/;
+    return phoneRegex.test(phone);
+  };
+
+  // 密码强度验证
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
 
   const handleAuth = async () => {
     if (!phone.trim()) {
@@ -31,8 +74,18 @@ export default function AuthScreen() {
       return;
     }
 
+    if (!validatePhone(phone)) {
+      Alert.alert('提示', '请输入正确的手机号格式');
+      return;
+    }
+
     if (!password.trim()) {
       Alert.alert('提示', '请输入密码');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      Alert.alert('提示', '密码长度至少6位');
       return;
     }
 
@@ -43,6 +96,10 @@ export default function AuthScreen() {
       }
       if (!verificationCode.trim()) {
         Alert.alert('提示', '请输入验证码');
+        return;
+      }
+      if (verificationCode.length !== 6) {
+        Alert.alert('提示', '请输入6位验证码');
         return;
       }
     }
@@ -58,7 +115,7 @@ export default function AuthScreen() {
         [
           {
             text: '确定',
-            onPress: () => router.replace('/role-selection'),
+            onPress: () => router.replace('/onboarding'),
           },
         ]
       );
@@ -70,6 +127,12 @@ export default function AuthScreen() {
       Alert.alert('提示', '请先输入手机号');
       return;
     }
+    if (!validatePhone(phone)) {
+      Alert.alert('提示', '请输入正确的手机号格式');
+      return;
+    }
+    
+    setCountdown(60);
     Alert.alert('验证码已发送', '请查收短信验证码');
   };
 
@@ -86,21 +149,29 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* 头部 */}
-          <View style={styles.header}>
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
             <View style={styles.logo}>
               <Text style={styles.logoEmoji}>🤱</Text>
             </View>
             <Text style={CommonStyles.textH2}>家有孕宝</Text>
             <Text style={CommonStyles.textBody}>
-              {authMode === 'login' ? '欢迎回来' : '创建账户'}
+              {authMode === 'login' ? '欢迎回来，开始美好的一天' : '创建账户，加入我们的大家庭'}
             </Text>
-          </View>
+          </Animated.View>
 
           {/* 表单 */}
           <View style={styles.form}>
@@ -113,28 +184,44 @@ export default function AuthScreen() {
               maxLength={11}
             />
 
-            <Input
-              label="密码"
-              placeholder="请输入密码"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            <View style={styles.passwordContainer}>
+              <Input
+                label="密码"
+                placeholder="请输入密码"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+              </TouchableOpacity>
+            </View>
 
             {authMode === 'register' && (
               <>
-                <Input
-                  label="确认密码"
-                  placeholder="请再次输入密码"
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                />
+                <View style={styles.passwordContainer}>
+                  <Input
+                    label="确认密码"
+                    placeholder="请再次输入密码"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Text style={styles.eyeIcon}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.codeContainer}>
                   <Input
                     label="验证码"
-                    placeholder="请输入验证码"
+                    placeholder="请输入6位验证码"
                     value={verificationCode}
                     onChangeText={setVerificationCode}
                     keyboardType="number-pad"
@@ -145,8 +232,9 @@ export default function AuthScreen() {
                     variant="secondary"
                     onPress={handleSendCode}
                     style={styles.sendCodeButton}
+                    disabled={countdown > 0}
                   >
-                    发送验证码
+                    {countdown > 0 ? `${countdown}s` : '发送验证码'}
                   </Button>
                 </View>
               </>
@@ -296,5 +384,19 @@ const styles = StyleSheet.create({
   skipContainer: {
     alignItems: 'center',
     paddingBottom: Spacing.xl,
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: Spacing.sm,
+    top: 38,
+    padding: Spacing.xs,
+    zIndex: 1,
+  },
+  eyeIcon: {
+    fontSize: 18,
+    color: Colors.neutral500,
   },
 });

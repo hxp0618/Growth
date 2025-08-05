@@ -16,9 +16,16 @@ import { nutritionService, NutritionRecommendation, FoodItem } from '@/services/
 interface NutritionGuideProps {
   pregnancyWeek?: number;
   style?: ViewStyle;
+  variant?: 'default' | 'compact';
+  size?: 'compact' | 'default' | 'large';
 }
 
-export default function NutritionGuide({ pregnancyWeek = 24, style }: NutritionGuideProps) {
+export default function NutritionGuide({
+  pregnancyWeek = 24,
+  style,
+  variant = 'default',
+  size = 'default'
+}: NutritionGuideProps) {
   const [recommendation, setRecommendation] = useState<NutritionRecommendation | null>(null);
   const [activeTab, setActiveTab] = useState<'recommended' | 'limited' | 'forbidden'>('recommended');
   const [showSeasonalFoods, setShowSeasonalFoods] = useState(false);
@@ -113,7 +120,12 @@ export default function NutritionGuide({ pregnancyWeek = 24, style }: NutritionG
 
   if (!recommendation) {
     return (
-      <Card style={style ? { ...styles.card, ...style } : styles.card}>
+      <Card
+        style={style}
+        variant="elevated"
+        shadow="card"
+        size={size}
+      >
         <View style={styles.loadingContainer}>
           <Text style={CommonStyles.textBody}>加载营养指导中...</Text>
         </View>
@@ -122,110 +134,145 @@ export default function NutritionGuide({ pregnancyWeek = 24, style }: NutritionG
   }
 
   return (
-    <Card style={style ? { ...styles.card, ...style } : styles.card}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 头部 */}
-        <View style={styles.header}>
-          <Text style={CommonStyles.textH4}>🍎 今日饮食指导</Text>
-          <Text style={[CommonStyles.textCaption, { color: Colors.neutral600 }]}>
-            第{pregnancyWeek}周专属建议
-          </Text>
-        </View>
+    <Card
+      style={style}
+      variant="elevated"
+      shadow="card"
+      size={size}
+    >
+      {/* 头部 */}
+      <View style={styles.header}>
+        <Text style={CommonStyles.textH4}>🍎 今日饮食指导</Text>
+        <Text style={[CommonStyles.textCaption, { color: Colors.neutral600 }]}>
+          第{pregnancyWeek}周专属建议
+        </Text>
+      </View>
 
-        {/* 标签页 */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={getTabStyle('recommended')}
-            onPress={() => setActiveTab('recommended')}
-          >
-            <Text style={getTabTextStyle('recommended')}>推荐</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={getTabStyle('limited')}
-            onPress={() => setActiveTab('limited')}
-          >
-            <Text style={getTabTextStyle('limited')}>限量</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={getTabStyle('forbidden')}
-            onPress={() => setActiveTab('forbidden')}
-          >
-            <Text style={getTabTextStyle('forbidden')}>避免</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 当前标签内容 */}
-        <View style={styles.contentContainer}>
-          <Text style={[CommonStyles.textBodySmall, styles.sectionTitle]}>
-            {getTabTitle()}
-          </Text>
-          
-          <FlatList
-            data={getCurrentFoods()}
-            renderItem={renderFoodItem}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* 应季食物推荐 */}
+      {/* 标签页 */}
+      <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={styles.seasonalToggle}
-          onPress={() => setShowSeasonalFoods(!showSeasonalFoods)}
+          style={getTabStyle('recommended')}
+          onPress={() => setActiveTab('recommended')}
         >
-          <Text style={styles.seasonalToggleText}>
-            🌸 应季食物推荐 {showSeasonalFoods ? '▲' : '▼'}
-          </Text>
+          <Text style={getTabTextStyle('recommended')}>推荐</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={getTabStyle('limited')}
+          onPress={() => setActiveTab('limited')}
+        >
+          <Text style={getTabTextStyle('limited')}>限量</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={getTabStyle('forbidden')}
+          onPress={() => setActiveTab('forbidden')}
+        >
+          <Text style={getTabTextStyle('forbidden')}>避免</Text>
+        </TouchableOpacity>
+      </View>
 
-        {showSeasonalFoods && (
-          <View style={styles.seasonalContainer}>
-            <Text style={[CommonStyles.textBodySmall, styles.sectionTitle]}>
-              当季新鲜推荐
-            </Text>
-            <FlatList
-              data={recommendation.seasonalRecommendations}
-              renderItem={renderFoodItem}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
-            />
+      {/* 当前标签内容 */}
+      <View style={styles.contentContainer}>
+        <Text style={[CommonStyles.textBodySmall, styles.sectionTitle]}>
+          {getTabTitle()}
+        </Text>
+        
+        {getCurrentFoods().map((item) => (
+          <View key={item.id} style={styles.foodItem}>
+            <Text style={styles.foodIcon}>{item.icon}</Text>
+            <View style={styles.foodContent}>
+              <Text style={[CommonStyles.textBody, styles.foodName]}>{item.name}</Text>
+              <Text style={[CommonStyles.textBodySmall, styles.foodReason]}>{item.reason}</Text>
+              {item.limit && (
+                <Text style={[CommonStyles.textCaption, styles.foodLimit]}>
+                  限量：{item.limit}
+                </Text>
+              )}
+              {item.alternatives && item.alternatives.length > 0 && (
+                <Text style={[CommonStyles.textCaption, styles.foodAlternatives]}>
+                  替代：{item.alternatives.join('、')}
+                </Text>
+              )}
+            </View>
+            <View style={[
+              styles.statusIndicator,
+              { backgroundColor: getStatusColor(item.status) }
+            ]} />
           </View>
-        )}
+        ))}
+      </View>
 
-        {/* 每日营养建议 */}
-        <View style={styles.tipsContainer}>
+      {/* 应季食物推荐 */}
+      <TouchableOpacity
+        style={styles.seasonalToggle}
+        onPress={() => setShowSeasonalFoods(!showSeasonalFoods)}
+      >
+        <Text style={styles.seasonalToggleText}>
+          🌸 应季食物推荐 {showSeasonalFoods ? '▲' : '▼'}
+        </Text>
+      </TouchableOpacity>
+
+      {showSeasonalFoods && (
+        <View style={styles.seasonalContainer}>
           <Text style={[CommonStyles.textBodySmall, styles.sectionTitle]}>
-            💡 今日营养建议
+            当季新鲜推荐
           </Text>
-          {recommendation.dailyTips.map((tip, index) => (
-            <Text key={index} style={[CommonStyles.textBodySmall, styles.tipItem]}>
-              • {tip}
-            </Text>
+          {recommendation.seasonalRecommendations.map((item) => (
+            <View key={item.id} style={styles.foodItem}>
+              <Text style={styles.foodIcon}>{item.icon}</Text>
+              <View style={styles.foodContent}>
+                <Text style={[CommonStyles.textBody, styles.foodName]}>{item.name}</Text>
+                <Text style={[CommonStyles.textBodySmall, styles.foodReason]}>{item.reason}</Text>
+                {item.limit && (
+                  <Text style={[CommonStyles.textCaption, styles.foodLimit]}>
+                    限量：{item.limit}
+                  </Text>
+                )}
+                {item.alternatives && item.alternatives.length > 0 && (
+                  <Text style={[CommonStyles.textCaption, styles.foodAlternatives]}>
+                    替代：{item.alternatives.join('、')}
+                  </Text>
+                )}
+              </View>
+              <View style={[
+                styles.statusIndicator,
+                { backgroundColor: getStatusColor(item.status) }
+              ]} />
+            </View>
           ))}
         </View>
+      )}
 
-        {/* 快捷操作 */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>📝</Text>
-            <Text style={CommonStyles.textCaption}>记录饮食</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>🛒</Text>
-            <Text style={CommonStyles.textCaption}>购物清单</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>📊</Text>
-            <Text style={CommonStyles.textCaption}>营养分析</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionButton}>
-            <Text style={styles.quickActionIcon}>👨‍⚕️</Text>
-            <Text style={CommonStyles.textCaption}>咨询营养师</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      {/* 每日营养建议 */}
+      <View style={styles.tipsContainer}>
+        <Text style={[CommonStyles.textBodySmall, styles.sectionTitle]}>
+          💡 今日营养建议
+        </Text>
+        {recommendation.dailyTips.map((tip, index) => (
+          <Text key={index} style={[CommonStyles.textBodySmall, styles.tipItem]}>
+            • {tip}
+          </Text>
+        ))}
+      </View>
+
+      {/* 快捷操作 */}
+      <View style={styles.quickActions}>
+        <TouchableOpacity style={styles.quickActionButton}>
+          <Text style={styles.quickActionIcon}>📝</Text>
+          <Text style={CommonStyles.textCaption}>记录饮食</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.quickActionButton}>
+          <Text style={styles.quickActionIcon}>🛒</Text>
+          <Text style={CommonStyles.textCaption}>购物清单</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.quickActionButton}>
+          <Text style={styles.quickActionIcon}>📊</Text>
+          <Text style={CommonStyles.textCaption}>营养分析</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.quickActionButton}>
+          <Text style={styles.quickActionIcon}>👨‍⚕️</Text>
+          <Text style={CommonStyles.textCaption}>咨询营养师</Text>
+        </TouchableOpacity>
+      </View>
     </Card>
   );
 }

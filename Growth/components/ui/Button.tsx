@@ -2,23 +2,27 @@ import React from 'react';
 import {
   TouchableOpacity,
   Text,
+  View,
   StyleSheet,
   ViewStyle,
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
-import { Colors, Typography, BorderRadius, ComponentSizes } from '../../constants/Theme';
+import { Colors, Typography, BorderRadius, ComponentSizes, Shadows } from '../../constants/Theme';
 
 export interface ButtonProps {
   children: React.ReactNode;
   onPress?: () => void;
-  variant?: 'primary' | 'secondary' | 'text';
+  variant?: 'primary' | 'secondary' | 'text' | 'outlined' | 'filled' | 'elevated';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
   color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+  fullWidth?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -31,31 +35,38 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   color = 'primary',
+  fullWidth = false,
+  icon,
+  iconPosition = 'left',
 }) => {
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: BorderRadius.md,
+      borderRadius: BorderRadius.lg,
       justifyContent: 'center',
       alignItems: 'center',
       flexDirection: 'row',
+      overflow: 'hidden',
     };
 
     // 尺寸样式
     const sizeStyles: Record<string, ViewStyle> = {
       small: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        minHeight: 36,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        minHeight: 40,
+        borderRadius: BorderRadius.md,
       },
       medium: {
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        minHeight: ComponentSizes.touchTarget,
+        paddingVertical: 14,
+        paddingHorizontal: 28,
+        minHeight: ComponentSizes.touchTarget + 4,
+        borderRadius: BorderRadius.lg,
       },
       large: {
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-        minHeight: 52,
+        paddingVertical: 18,
+        paddingHorizontal: 36,
+        minHeight: 56,
+        borderRadius: BorderRadius.xl,
       },
     };
 
@@ -72,45 +83,73 @@ const Button: React.FC<ButtonProps> = ({
     const variantStyles: Record<string, ViewStyle> = {
       primary: {
         backgroundColor: colorMap[color],
+        ...Shadows.button,
       },
       secondary: {
         backgroundColor: 'transparent',
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: colorMap[color],
+      },
+      outlined: {
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderColor: colorMap[color],
+      },
+      filled: {
+        backgroundColor: `${colorMap[color]}15`,
+        borderWidth: 0,
+      },
+      elevated: {
+        backgroundColor: Colors.neutral100,
+        borderWidth: 1,
+        borderColor: Colors.neutral300,
+        ...Shadows.md,
       },
       text: {
         backgroundColor: 'transparent',
+        borderWidth: 0,
       },
     };
 
+    // 全宽样式
+    const fullWidthStyle: ViewStyle = fullWidth ? {
+      width: '100%',
+    } : {};
+
     // 禁用状态
     const disabledStyle: ViewStyle = disabled || loading ? {
-      opacity: 0.6,
+      opacity: 0.5,
+      transform: [{ scale: 0.98 }],
     } : {};
 
     return {
       ...baseStyle,
       ...sizeStyles[size],
       ...variantStyles[variant],
+      ...fullWidthStyle,
       ...disabledStyle,
     };
   };
 
   const getTextStyle = (): TextStyle => {
     const baseStyle: TextStyle = {
-      fontWeight: Typography.fontWeight.medium,
+      fontWeight: Typography.fontWeight.semibold,
+      textAlign: 'center',
     };
 
     // 尺寸对应的字体大小
     const sizeStyles: Record<string, TextStyle> = {
       small: {
         fontSize: Typography.fontSize.bodySmall,
+        fontWeight: Typography.fontWeight.medium,
       },
       medium: {
         fontSize: Typography.fontSize.body,
+        fontWeight: Typography.fontWeight.semibold,
       },
       large: {
         fontSize: Typography.fontSize.bodyLarge,
+        fontWeight: Typography.fontWeight.semibold,
       },
     };
 
@@ -131,6 +170,15 @@ const Button: React.FC<ButtonProps> = ({
       secondary: {
         color: colorMap[color],
       },
+      outlined: {
+        color: colorMap[color],
+      },
+      filled: {
+        color: colorMap[color],
+      },
+      elevated: {
+        color: Colors.neutral800,
+      },
       text: {
         color: colorMap[color],
       },
@@ -143,25 +191,63 @@ const Button: React.FC<ButtonProps> = ({
     };
   };
 
+  const renderContent = () => {
+    const iconElement = icon && (
+      <View style={[
+        styles.iconContainer,
+        iconPosition === 'right' && styles.iconRight
+      ]}>
+        {icon}
+      </View>
+    );
+
+    const textElement = (
+      <Text style={[getTextStyle(), textStyle]}>
+        {children}
+      </Text>
+    );
+
+    const loadingElement = loading && (
+      <ActivityIndicator
+        size="small"
+        color={variant === 'primary' ? Colors.neutral100 : Colors.primary}
+        style={styles.loadingIndicator}
+      />
+    );
+
+    return (
+      <>
+        {loading && loadingElement}
+        {!loading && iconPosition === 'left' && iconElement}
+        {textElement}
+        {!loading && iconPosition === 'right' && iconElement}
+      </>
+    );
+  };
+
   return (
     <TouchableOpacity
       style={[getButtonStyle(), style]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
-      {loading && (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' ? Colors.neutral100 : Colors.primary}
-          style={{ marginRight: 8 }}
-        />
-      )}
-      <Text style={[getTextStyle(), textStyle]}>
-        {children}
-      </Text>
+      {renderContent()}
     </TouchableOpacity>
   );
 };
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    marginRight: 8,
+  },
+  iconRight: {
+    marginRight: 0,
+    marginLeft: 8,
+  },
+  loadingIndicator: {
+    marginRight: 8,
+  },
+});
 
 export default Button;
